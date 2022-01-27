@@ -1,10 +1,52 @@
 {{/* vim: set filetype=mustache: */}}
-
 {{/*
 Expand the name of the chart.
 */}}
 {{- define "kafka.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+
+{{/*
+Create a default fully qualified app name.
+We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
+If release name contains chart name it will be used as a full name.
+*/}}
+{{- define "kafka.fullname" -}}
+{{- if .Values.fullnameOverride -}}
+{{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" -}}
+{{- else -}}
+{{- $name := default .Chart.Name .Values.nameOverride -}}
+{{- if contains $name .Release.Name -}}
+{{- .Release.Name | trunc 63 | trimSuffix "-" -}}
+{{- else -}}
+{{- printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Create chart name and version as used by the chart label.
+*/}}
+{{- define "kafka.chart" -}}
+{{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+
+{{/*
+Common labels
+*/}}
+{{- define "kafka.labels" -}}
+app.kubernetes.io/name: {{ include "kafka.name" . }}
+helm.sh/chart: {{ include "kafka.chart" . }}
+app.kubernetes.io/instance: {{ .Release.Name }}
+app.kubernetes.io/managed-by: {{ .Release.Service }}
+{{- end -}}
+
+{{/*
+Labels to use on deploy.spec.selector.matchLabels and svc.spec.selector
+*/}}
+{{- define "kafka.matchLabels" -}}
+app.kubernetes.io/name: {{ include "kafka.name" . }}
+app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end -}}
 
 {{/*
@@ -25,7 +67,7 @@ We truncate at 63 chars because some Kubernetes name fields are limited to this 
  */}}
 {{- define "kafka.serviceAccountName" -}}
 {{- if .Values.serviceAccount.create -}}
-    {{ default (include "common.names.fullname" .) .Values.serviceAccount.name }}
+    {{ default (include "kafka.fullname" .) .Values.serviceAccount.name }}
 {{- else -}}
     {{ default "default" .Values.serviceAccount.name }}
 {{- end -}}
@@ -35,39 +77,68 @@ We truncate at 63 chars because some Kubernetes name fields are limited to this 
 Return the proper Kafka image name
 */}}
 {{- define "kafka.image" -}}
-{{ include "common.images.image" (dict "imageRoot" .Values.image "global" .Values.global) }}
+{{- $registryName := .Values.image.registry -}}
+{{- $repositoryName := .Values.image.repository -}}
+{{- $tag := .Values.image.tag | toString -}}
+{{/*
+Helm 2.11 supports the assignment of a value to a variable defined in a different scope,
+but Helm 2.9 and 2.10 doesn't support it, so we need to implement this if-else logic.
+Also, we can't use a single if because lazy evaluation is not an option
+*/}}
+{{- if .Values.global }}
+    {{- if .Values.global.imageRegistry }}
+        {{- printf "%s/%s:%s" .Values.global.imageRegistry $repositoryName $tag -}}
+    {{- else -}}
+        {{- printf "%s/%s:%s" $registryName $repositoryName $tag -}}
+    {{- end -}}
+{{- else -}}
+    {{- printf "%s/%s:%s" $registryName $repositoryName $tag -}}
+{{- end -}}
 {{- end -}}
 
 {{/*
 Return the proper image name (for the init container auto-discovery image)
 */}}
 {{- define "kafka.externalAccess.autoDiscovery.image" -}}
-{{ include "common.images.image" (dict "imageRoot" .Values.externalAccess.autoDiscovery.image "global" .Values.global) }}
+{{- $registryName := .Values.externalAccess.autoDiscovery.image.registry -}}
+{{- $repositoryName := .Values.externalAccess.autoDiscovery.image.repository -}}
+{{- $tag := .Values.externalAccess.autoDiscovery.image.tag | toString -}}
+{{/*
+Helm 2.11 supports the assignment of a value to a variable defined in a different scope,
+but Helm 2.9 and 2.10 doesn't support it, so we need to implement this if-else logic.
+Also, we can't use a single if because lazy evaluation is not an option
+*/}}
+{{- if .Values.global }}
+    {{- if .Values.global.imageRegistry }}
+        {{- printf "%s/%s:%s" .Values.global.imageRegistry $repositoryName $tag -}}
+    {{- else -}}
+        {{- printf "%s/%s:%s" $registryName $repositoryName $tag -}}
+    {{- end -}}
+{{- else -}}
+    {{- printf "%s/%s:%s" $registryName $repositoryName $tag -}}
+{{- end -}}
 {{- end -}}
 
 {{/*
 Return the proper image name (for the init container volume-permissions image)
 */}}
 {{- define "kafka.volumePermissions.image" -}}
-{{ include "common.images.image" (dict "imageRoot" .Values.volumePermissions.image "global" .Values.global) }}
-{{- end -}}
-
+{{- $registryName := .Values.volumePermissions.image.registry -}}
+{{- $repositoryName := .Values.volumePermissions.image.repository -}}
+{{- $tag := .Values.volumePermissions.image.tag | toString -}}
 {{/*
-Create a default fully qualified Kafka exporter name.
-We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
+Helm 2.11 supports the assignment of a value to a variable defined in a different scope,
+but Helm 2.9 and 2.10 doesn't support it, so we need to implement this if-else logic.
+Also, we can't use a single if because lazy evaluation is not an option
 */}}
-{{- define "kafka.metrics.kafka.fullname" -}}
-  {{- printf "%s-exporter" (include "common.names.fullname" .) | trunc 63 | trimSuffix "-" }}
-{{- end -}}
-
-{{/*
- Create the name of the service account to use for Kafka exporter pods
- */}}
-{{- define "kafka.metrics.kafka.serviceAccountName" -}}
-{{- if .Values.metrics.kafka.serviceAccount.create -}}
-    {{ default (include "kafka.metrics.kafka.fullname" .) .Values.metrics.kafka.serviceAccount.name }}
+{{- if .Values.global }}
+    {{- if .Values.global.imageRegistry }}
+        {{- printf "%s/%s:%s" .Values.global.imageRegistry $repositoryName $tag -}}
+    {{- else -}}
+        {{- printf "%s/%s:%s" $registryName $repositoryName $tag -}}
+    {{- end -}}
 {{- else -}}
-    {{ default "default" .Values.metrics.kafka.serviceAccount.name }}
+    {{- printf "%s/%s:%s" $registryName $repositoryName $tag -}}
 {{- end -}}
 {{- end -}}
 
@@ -75,21 +146,99 @@ We truncate at 63 chars because some Kubernetes name fields are limited to this 
 Return the proper Kafka exporter image name
 */}}
 {{- define "kafka.metrics.kafka.image" -}}
-{{ include "common.images.image" (dict "imageRoot" .Values.metrics.kafka.image "global" .Values.global) }}
+{{- $registryName := .Values.metrics.kafka.image.registry -}}
+{{- $repositoryName := .Values.metrics.kafka.image.repository -}}
+{{- $tag := .Values.metrics.kafka.image.tag | toString -}}
+{{/*
+Helm 2.11 supports the assignment of a value to a variable defined in a different scope,
+but Helm 2.9 and 2.10 doesn't support it, so we need to implement this if-else logic.
+Also, we can't use a single if because lazy evaluation is not an option
+*/}}
+{{- if .Values.global }}
+    {{- if .Values.global.imageRegistry }}
+        {{- printf "%s/%s:%s" .Values.global.imageRegistry $repositoryName $tag -}}
+    {{- else -}}
+        {{- printf "%s/%s:%s" $registryName $repositoryName $tag -}}
+    {{- end -}}
+{{- else -}}
+    {{- printf "%s/%s:%s" $registryName $repositoryName $tag -}}
+{{- end -}}
 {{- end -}}
 
 {{/*
 Return the proper JMX exporter image name
 */}}
 {{- define "kafka.metrics.jmx.image" -}}
-{{ include "common.images.image" (dict "imageRoot" .Values.metrics.jmx.image "global" .Values.global) }}
+{{- $registryName := .Values.metrics.jmx.image.registry -}}
+{{- $repositoryName := .Values.metrics.jmx.image.repository -}}
+{{- $tag := .Values.metrics.jmx.image.tag | toString -}}
+{{/*
+Helm 2.11 supports the assignment of a value to a variable defined in a different scope,
+but Helm 2.9 and 2.10 doesn't support it, so we need to implement this if-else logic.
+Also, we can't use a single if because lazy evaluation is not an option
+*/}}
+{{- if .Values.global }}
+    {{- if .Values.global.imageRegistry }}
+        {{- printf "%s/%s:%s" .Values.global.imageRegistry $repositoryName $tag -}}
+    {{- else -}}
+        {{- printf "%s/%s:%s" $registryName $repositoryName $tag -}}
+    {{- end -}}
+{{- else -}}
+    {{- printf "%s/%s:%s" $registryName $repositoryName $tag -}}
+{{- end -}}
 {{- end -}}
 
 {{/*
 Return the proper Docker Image Registry Secret Names
 */}}
 {{- define "kafka.imagePullSecrets" -}}
-{{ include "common.images.pullSecrets" (dict "images" (list .Values.image .Values.externalAccess.autoDiscovery.image .Values.volumePermissions.image .Values.metrics.kafka.image .Values.metrics.jmx.image) "global" .Values.global) }}
+{{/*
+Helm 2.11 supports the assignment of a value to a variable defined in a different scope,
+but Helm 2.9 and 2.10 does not support it, so we need to implement this if-else logic.
+Also, we can not use a single if because lazy evaluation is not an option
+*/}}
+{{- if .Values.global }}
+{{- if .Values.global.imagePullSecrets }}
+imagePullSecrets:
+{{- range .Values.global.imagePullSecrets }}
+  - name: {{ . }}
+{{- end }}
+{{- else if or .Values.image.pullSecrets .Values.externalAccess.autoDiscovery.image.pullSecrets .Values.volumePermissions.image.pullSecrets .Values.metrics.kafka.image.pullSecrets .Values.metrics.jmx.image.pullSecrets }}
+imagePullSecrets:
+{{- range .Values.image.pullSecrets }}
+  - name: {{ . }}
+{{- end }}
+{{- range .Values.externalAccess.autoDiscovery.image.pullSecrets }}
+  - name: {{ . }}
+{{- end }}
+{{- range .Values.volumePermissions.image.pullSecrets }}
+  - name: {{ . }}
+{{- end }}
+{{- range .Values.metrics.kafka.image.pullSecrets }}
+  - name: {{ . }}
+{{- end }}
+{{- range .Values.metrics.jmx.image.pullSecrets }}
+  - name: {{ . }}
+{{- end }}
+{{- end -}}
+{{- else if or .Values.image.pullSecrets .Values.externalAccess.autoDiscovery.image.pullSecrets .Values.volumePermissions.image.pullSecrets .Values.metrics.kafka.image.pullSecrets .Values.metrics.jmx.image.pullSecrets }}
+imagePullSecrets:
+{{- range .Values.image.pullSecrets }}
+  - name: {{ . }}
+{{- end }}
+{{- range .Values.externalAccess.autoDiscovery.image.pullSecrets }}
+  - name: {{ . }}
+{{- end }}
+{{- range .Values.volumePermissions.image.pullSecrets }}
+  - name: {{ . }}
+{{- end }}
+{{- range .Values.metrics.kafka.image.pullSecrets }}
+  - name: {{ . }}
+{{- end }}
+{{- range .Values.metrics.jmx.image.pullSecrets }}
+  - name: {{ . }}
+{{- end }}
+{{- end -}}
 {{- end -}}
 
 {{/*
@@ -148,30 +297,11 @@ Return true if authentication via SASL should be configured for inter-broker com
 {{- end -}}
 
 {{/*
-Return true if encryption via TLS for client connections should be configured
-*/}}
-{{- define "kafka.client.tlsEncryption" -}}
-{{- $tlsProtocols := list "tls" "mtls" "sasl_tls" -}}
-{{- if (has .Values.auth.clientProtocol $tlsProtocols) -}}
-    {{- true -}}
-{{- end -}}
-{{- end -}}
-
-{{/*
-Return true if encryption via TLS for inter broker communication connections should be configured
-*/}}
-{{- define "kafka.interBroker.tlsEncryption" -}}
-{{- $tlsProtocols := list "tls" "mtls" "sasl_tls" -}}
-{{- if (has .Values.auth.interBrokerProtocol $tlsProtocols) -}}
-    {{- true -}}
-{{- end -}}
-{{- end -}}
-
-{{/*
 Return true if encryption via TLS should be configured
 */}}
 {{- define "kafka.tlsEncryption" -}}
-{{- if or (include "kafka.client.tlsEncryption" .) (include "kafka.interBroker.tlsEncryption" .) -}}
+{{- $tlsProtocols := list "tls" "mtls" "sasl_tls" -}}
+{{- if or (has .Values.auth.clientProtocol $tlsProtocols) (has .Values.auth.interBrokerProtocol $tlsProtocols) -}}
     {{- true -}}
 {{- end -}}
 {{- end -}}
@@ -194,14 +324,33 @@ SASL_PLAINTEXT
 {{- end -}}
 
 {{/*
+Return the SASL type
+Usage:
+{{ include "kafka.auth.saslMechanisms" ( dict "type" .Values.path.to.the.Value ) }}
+*/}}
+{{- define "kafka.auth.saslMechanisms" -}}
+{{- $mechanisms := list -}}
+{{- if .type | regexFind "plain" -}}
+{{- $mechanisms = append $mechanisms "PLAIN" -}}
+{{- end -}}
+{{- if .type | regexFind "scram-sha-256" -}}
+{{- $mechanisms = append $mechanisms "SCRAM-SHA-256" -}}
+{{- end -}}
+{{- if .type | regexFind "scram-sha-512" -}}
+{{- $mechanisms = append $mechanisms "SCRAM-SHA-512" -}}
+{{- end -}}
+{{- $mechanisms = join "," $mechanisms -}}
+{{- printf "%s" $mechanisms -}}
+{{- end -}}
+
+{{/*
 Return the Kafka JAAS credentials secret
 */}}
 {{- define "kafka.jaasSecretName" -}}
-{{- $secretName := .Values.auth.sasl.jaas.existingSecret -}}
-{{- if $secretName -}}
-    {{- printf "%s" (tpl $secretName $) -}}
+{{- if .Values.auth.jaas.existingSecret -}}
+    {{- printf "%s" (tpl .Values.auth.jaas.existingSecret $) -}}
 {{- else -}}
-    {{- printf "%s-jaas" (include "common.names.fullname" .) -}}
+    {{- printf "%s-jaas" (include "kafka.fullname" .) -}}
 {{- end -}}
 {{- end -}}
 
@@ -209,17 +358,27 @@ Return the Kafka JAAS credentials secret
 Return true if a JAAS credentials secret object should be created
 */}}
 {{- define "kafka.createJaasSecret" -}}
-{{- $secretName := .Values.auth.sasl.jaas.existingSecret -}}
-{{- if and (or (include "kafka.client.saslAuthentication" .) (include "kafka.interBroker.saslAuthentication" .) (and .Values.zookeeper.auth.enabled .Values.auth.sasl.jaas.zookeeperUser)) (empty $secretName) -}}
+{{- if and (or (include "kafka.client.saslAuthentication" .) (include "kafka.interBroker.saslAuthentication" .) .Values.auth.jaas.zookeeperUser) (not .Values.auth.jaas.existingSecret) -}}
     {{- true -}}
 {{- end -}}
 {{- end -}}
 
 {{/*
-Return true if a TLS credentials secret object should be created
+Return the Kafka JKS credentials secret
 */}}
-{{- define "kafka.createTlsSecret" -}}
-{{- if and (include "kafka.tlsEncryption" .) (empty .Values.auth.tls.existingSecrets) (eq .Values.auth.tls.type "pem") .Values.auth.tls.autoGenerated }}
+{{- define "kafka.jksSecretName" -}}
+{{- if .Values.auth.jksSecret -}}
+    {{- printf "%s" (tpl .Values.auth.jksSecret $) -}}
+{{- else -}}
+    {{- printf "%s-jks" (include "kafka.fullname" .) -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Return true if a JAAS credentials secret object should be created
+*/}}
+{{- define "kafka.createJksSecret" -}}
+{{- if and (.Files.Glob "files/jks/*.jks") (not .Values.auth.jksSecret) }}
     {{- true -}}
 {{- end -}}
 {{- end -}}
@@ -231,7 +390,7 @@ Return the Kafka configuration configmap
 {{- if .Values.existingConfigmap -}}
     {{- printf "%s" (tpl .Values.existingConfigmap $) -}}
 {{- else -}}
-    {{- printf "%s-configuration" (include "common.names.fullname" .) -}}
+    {{- printf "%s-configuration" (include "kafka.fullname" .) -}}
 {{- end -}}
 {{- end -}}
 
@@ -251,7 +410,7 @@ Return the Kafka log4j ConfigMap name.
 {{- if .Values.existingLog4jConfigMap -}}
     {{- printf "%s" (tpl .Values.existingLog4jConfigMap $) -}}
 {{- else -}}
-    {{- printf "%s-log4j-configuration" (include "common.names.fullname" .) -}}
+    {{- printf "%s-log4j-configuration" (include "kafka.fullname" .) -}}
 {{- end -}}
 {{- end -}}
 
@@ -265,28 +424,13 @@ Return true if a log4j ConfigMap object should be created.
 {{- end -}}
 
 {{/*
-Return the SASL mechanism to use for the Kafka exporter to access Kafka
-The exporter uses a different nomenclature so we need to do this hack
-*/}}
-{{- define "kafka.metrics.kafka.saslMechanism" -}}
-{{- $saslMechanisms := .Values.auth.sasl.mechanisms }}
-{{- if contains "scram-sha-512" $saslMechanisms }}
-    {{- printf "scram-sha512" -}}
-{{- else if contains "scram-sha-256" $saslMechanisms }}
-    {{- printf "scram-sha256" -}}
-{{- else -}}
-    {{- printf "plain" -}}
-{{- end -}}
-{{- end -}}
-
-{{/*
 Return the Kafka configuration configmap
 */}}
 {{- define "kafka.metrics.jmx.configmapName" -}}
 {{- if .Values.metrics.jmx.existingConfigmap -}}
     {{- printf "%s" (tpl .Values.metrics.jmx.existingConfigmap $) -}}
 {{- else -}}
-    {{- printf "%s-jmx-configuration" (include "common.names.fullname" .) -}}
+    {{- printf "%s-jmx-configuration" (include "kafka.fullname" .) -}}
 {{- end -}}
 {{- end -}}
 
@@ -300,14 +444,38 @@ Return true if a configmap object should be created
 {{- end -}}
 
 {{/*
+Renders a value that contains template.
+Usage:
+{{ include "kafka.tplValue" ( dict "value" .Values.path.to.the.Value "context" $) }}
+*/}}
+{{- define "kafka.tplValue" -}}
+    {{- if typeIs "string" .value }}
+        {{- tpl .value .context }}
+    {{- else }}
+        {{- tpl (.value | toYaml) .context }}
+    {{- end }}
+{{- end -}}
+
+{{/*
 Check if there are rolling tags in the images
 */}}
 {{- define "kafka.checkRollingTags" -}}
-{{- include "common.warnings.rollingTag" .Values.image }}
-{{- include "common.warnings.rollingTag" .Values.externalAccess.autoDiscovery.image }}
-{{- include "common.warnings.rollingTag" .Values.metrics.kafka.image }}
-{{- include "common.warnings.rollingTag" .Values.metrics.jmx.image }}
-{{- include "common.warnings.rollingTag" .Values.volumePermissions.image }}
+{{- if and (contains "bitnami/" .Values.image.repository) (not (.Values.image.tag | toString | regexFind "-r\\d+$|sha256:")) }}
+WARNING: Rolling tag detected ({{ .Values.image.repository }}:{{ .Values.image.tag }}), please note that it is strongly recommended to avoid using rolling tags in a production environment.
++info https://docs.bitnami.com/containers/how-to/understand-rolling-tags-containers/
+{{- end }}
+{{- if and (contains "bitnami/" .Values.externalAccess.autoDiscovery.image.repository) (not (.Values.externalAccess.autoDiscovery.image.tag | toString | regexFind "-r\\d+$|sha256:")) }}
+WARNING: Rolling tag detected ({{ .Values.externalAccess.autoDiscovery.image.repository }}:{{ .Values.externalAccess.autoDiscovery.image.tag }}), please note that it is strongly recommended to avoid using rolling tags in a production environment.
++info https://docs.bitnami.com/containers/how-to/understand-rolling-tags-containers/
+{{- end }}
+{{- if and (contains "bitnami/" .Values.metrics.kafka.image.repository) (not (.Values.metrics.kafka.image.tag | toString | regexFind "-r\\d+$|sha256:")) }}
+WARNING: Rolling tag detected ({{ .Values.metrics.kafka.image.repository }}:{{ .Values.metrics.kafka.image.tag }}), please note that it is strongly recommended to avoid using rolling tags in a production environment.
++info https://docs.bitnami.com/containers/how-to/understand-rolling-tags-containers/
+{{- end }}
+{{- if and (contains "bitnami/" .Values.metrics.jmx.image.repository) (not (.Values.metrics.jmx.image.tag | toString | regexFind "-r\\d+$|sha256:")) }}
+WARNING: Rolling tag detected ({{ .Values.metrics.jmx.image.repository }}:{{ .Values.metrics.jmx.image.tag }}), please note that it is strongly recommended to avoid using rolling tags in a production environment.
++info https://docs.bitnami.com/containers/how-to/understand-rolling-tags-containers/
+{{- end }}
 {{- end -}}
 
 {{/*
@@ -319,9 +487,8 @@ Compile all warnings into a single message, and call fail.
 {{- $messages := append $messages (include "kafka.validateValues.nodePortListLength" .) -}}
 {{- $messages := append $messages (include "kafka.validateValues.externalAccessServiceType" .) -}}
 {{- $messages := append $messages (include "kafka.validateValues.externalAccessAutoDiscoveryRBAC" .) -}}
+{{- $messages := append $messages (include "kafka.validateValues.jksSecret" .) -}}
 {{- $messages := append $messages (include "kafka.validateValues.saslMechanisms" .) -}}
-{{- $messages := append $messages (include "kafka.validateValues.tlsSecrets" .) -}}
-{{- $messages := append $messages (include "kafka.validateValues.tlsSecrets.length" .) -}}
 {{- $messages := without $messages "" -}}
 {{- $message := join "\n" $messages -}}
 
@@ -353,54 +520,37 @@ kafka: .Values.externalAccess.service.nodePorts
 {{- define "kafka.validateValues.externalAccessServiceType" -}}
 {{- if and (not (eq .Values.externalAccess.service.type "NodePort")) (not (eq .Values.externalAccess.service.type "LoadBalancer")) -}}
 kafka: externalAccess.service.type
-    Available service type for external access are NodePort or LoadBalancer.
+    Available servive type for external access are NodePort or LoadBalancer.
 {{- end -}}
 {{- end -}}
 
 {{/* Validate values of Kafka - RBAC should be enabled when autoDiscovery is enabled */}}
 {{- define "kafka.validateValues.externalAccessAutoDiscoveryRBAC" -}}
-{{- if and .Values.externalAccess.enabled .Values.externalAccess.autoDiscovery.enabled (not .Values.rbac.create ) }}
+{{- if and .Values.externalAccess.enabled .Values.externalAccess.autoDiscovery.enabled (not .Values.rbac.create )}}
 kafka: rbac.create
     By specifying "externalAccess.enabled=true" and "externalAccess.autoDiscovery.enabled=true"
-    an initContainer will be used to auto-detect the external IPs/ports by querying the
+    an initContainer will be used to autodetect the external IPs/ports by querying the
     K8s API. Please note this initContainer requires specific RBAC resources. You can create them
     by specifying "--set rbac.create=true".
 {{- end -}}
 {{- end -}}
 
+{{/* Validate values of Kafka - A secret containing JKS files must be provided when TLS authentication is enabled */}}
+{{- define "kafka.validateValues.jksSecret" -}}
+{{- if and (include "kafka.tlsEncryption" .) (not .Values.auth.jksSecret) (not (.Files.Glob "files/jks/*.jks")) }}
+kafka: auth.jksSecret
+    A secret containing the Kafka JKS files is required when TLS encryption in enabled
+{{- end -}}
+{{- end -}}
+
 {{/* Validate values of Kafka - SASL mechanisms must be provided when using SASL */}}
 {{- define "kafka.validateValues.saslMechanisms" -}}
-{{- if and (or (.Values.auth.clientProtocol | regexFind "sasl") (.Values.auth.interBrokerProtocol | regexFind "sasl") (and .Values.zookeeper.auth.enabled .Values.auth.sasl.jaas.zookeeperUser)) (not .Values.auth.sasl.mechanisms) }}
-kafka: auth.sasl.mechanisms
+{{- if and (or (.Values.auth.clientProtocol | regexFind "sasl") (.Values.auth.interBrokerProtocol | regexFind "sasl") .Values.auth.jaas.zookeeperUser) (not .Values.auth.saslMechanisms) }}
+kafka: auth.saslMechanisms
     The SASL mechanisms are required when either auth.clientProtocol or auth.interBrokerProtocol use SASL or Zookeeper user is provided.
 {{- end }}
-{{- if not (contains .Values.auth.sasl.interBrokerMechanism .Values.auth.sasl.mechanisms) }}
-kafka: auth.sasl.mechanisms
-    auth.sasl.interBrokerMechanism must be provided and it should be one of the specified mechanisms at auth.saslMechanisms
-{{- end -}}
-{{- end -}}
-
-{{/* Validate values of Kafka - Secrets containing TLS certs must be provided when TLS authentication is enabled */}}
-{{- define "kafka.validateValues.tlsSecrets" -}}
-{{- if and (include "kafka.tlsEncryption" .) (eq .Values.auth.tls.type "jks") (empty .Values.auth.tls.existingSecrets) }}
-kafka: auth.tls.existingSecrets
-    A secret containing the Kafka JKS keystores and truststore is required
-    when TLS encryption in enabled and TLS format is "JKS"
-{{- else if and (include "kafka.tlsEncryption" .) (eq .Values.auth.tls.type "pem") (empty .Values.auth.tls.existingSecrets) (not .Values.auth.tls.autoGenerated) }}
-kafka: auth.tls.existingSecrets
-    A secret containing the Kafka TLS certificates and keys is required
-    when TLS encryption in enabled and TLS format is "PEM"
-{{- end -}}
-{{- end -}}
-
-{{/* Validate values of Kafka - The number of secrets containing TLS certs should be equal to the number of replicas */}}
-{{- define "kafka.validateValues.tlsSecrets.length" -}}
-{{- $replicaCount := int .Values.replicaCount }}
-{{- if and (include "kafka.tlsEncryption" .) (not (empty .Values.auth.tls.existingSecrets)) }}
-{{- $existingSecretsLength := len .Values.auth.tls.existingSecrets }}
-{{- if ne $replicaCount $existingSecretsLength }}
-kafka: .Values.auth.tls.existingSecrets
-    Number of replicas and existingSecrets array length must be the same. Currently: replicaCount = {{ $replicaCount }} and existingSecrets = {{ $existingSecretsLength }}
-{{- end -}}
+{{- if not (contains .Values.auth.saslInterBrokerMechanism .Values.auth.saslMechanisms) }}
+kafka: auth.saslMechanisms
+    auth.saslInterBrokerMechanism must be provided and it should be one of the specified mechanisms at auth.saslMechanisms
 {{- end -}}
 {{- end -}}
