@@ -114,7 +114,7 @@ deleteTopicEnable: false
 ## Switch to enable auto creation of topics.
 ## Enabling auto creation of topics not recommended for production or similar environments.
 ##
-autoCreateTopicsEnable: true
+autoCreateTopicsEnable: false
 
 ## The number of messages to accept before forcing a flush of data to disk.
 ##
@@ -150,19 +150,19 @@ maxMessageBytes: _1000012
 
 ## Default replication factors for automatically created topics
 ##
-defaultReplicationFactor: 1
+defaultReplicationFactor: 3
 
 ## The replication factor for the offsets topic
 ##
-offsetsTopicReplicationFactor: 1
+offsetsTopicReplicationFactor: 3
 
 ## The replication factor for the transaction topic
 ##
-transactionStateLogReplicationFactor: 1
+transactionStateLogReplicationFactor: 3
 
 ## Overridden min.insync.replicas config for the transaction topic
 ##
-transactionStateLogMinIsr: 1
+transactionStateLogMinIsr: 3
 
 ## The number of threads doing disk I/O.
 ##
@@ -242,8 +242,8 @@ auth:
   ## | sasl      | Yes (via SASL)                | No                 |
   ## | sasl_tls  | Yes (via SASL)                | Yes                |
   ##
-  clientProtocol: plaintext
-  interBrokerProtocol: plaintext
+  clientProtocol: sasl
+  interBrokerProtocol: sasl
 
   ## Allowed SASL mechanisms when clientProtocol or interBrokerProtocol are using either sasl or sasl_tls
   ##
@@ -288,11 +288,11 @@ auth:
     clientUsers:
       - user
 
-    ## Kafka client passwords. This is mandatory if more than one user is specified in clientUsers.
+    ## Kafka client passwords
     ##
     ## clientPasswords:
     ##   - password1
-    ##   - password2"
+    ##   - password2
     ##
     clientPasswords: []
 
@@ -306,15 +306,15 @@ auth:
 
     ## Kafka Zookeeper user
     ##
-    # zookeeperUser:
+    zookeeperUser: zookeeperUser
 
     ## Kafka Zookeeper password
     ##
-    # zookeeperPassword:
+    zookeeperPassword: zookeeperPassword
 
     ## Name of the existing secret containing credentials for clientUsers, interBrokerUser and zookeeperUser.
     ## Create this secret running the command below where SECRET_NAME is the name of the secret you want to create:
-    ##       kubectl create secret generic SECRET_NAME --from-literal=client-passwords=CLIENT_PASSWORD1,CLIENT_PASSWORD2 --from-literal=inter-broker-password=INTER_BROKER_PASSWORD --from-literal=zookeeper-password=ZOOKEEPER_PASSWORD
+    ##       kubectl create secret generic SECRET_NAME --from-literal=client-password=CLIENT_PASSWORD1,CLIENT_PASSWORD2 --from-literal=inter-broker-password=INTER_BROKER_PASSWORD --from-literal=zookeeper-password=ZOOKEEPER_PASSWORD
     ##
     # existingSecret:
 
@@ -338,7 +338,7 @@ advertisedListeners: []
 
 ## Allow to use the PLAINTEXT listener.
 ##
-allowPlaintextListener: true
+allowPlaintextListener: false
 
 ## Name of listener used for communication between brokers.
 ##
@@ -346,7 +346,7 @@ interBrokerListenerName: INTERNAL
 
 ## Number of Kafka brokers to deploy
 ##
-replicaCount: 1
+replicaCount: 3
 
 ## StrategyType, can be set to RollingUpdate or OnDelete by default.
 ## ref: https://kubernetes.io/docs/tutorials/stateful-application/basic-stateful-set/#updating-statefulsets
@@ -360,7 +360,6 @@ updateStrategy: RollingUpdate
 
 ## Pod labels. Evaluated as a template
 ## Ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
-##
 podLabels: {}
 
 ## Pod annotations. Evaluated as a template
@@ -370,7 +369,6 @@ podAnnotations: {}
 
 ## Name of the priority class to be used by kafka pods, priority class needs to be created beforehand
 ## Ref: https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/
-##
 priorityClassName: ""
 
 ## Affinity for pod assignment. Evaluated as a template
@@ -424,31 +422,28 @@ resources:
 ## ref: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-probes
 ##
 livenessProbe:
-  enabled: true
+  tcpSocket:
+    port: kafka-client
   initialDelaySeconds: 10
   timeoutSeconds: 5
   # failureThreshold: 3
   # periodSeconds: 10
   # successThreshold: 1
 readinessProbe:
-  enabled: true
+  tcpSocket:
+    port: kafka-client
   initialDelaySeconds: 5
   failureThreshold: 6
   timeoutSeconds: 5
   # periodSeconds: 10
   # successThreshold: 1
 
-## Custom liveness/readiness probes that will override the default ones
-##
-customLivenessProbe: {}
-customReadinessProbe: {}
-
 ## Pod Disruption Budget configuration
 ## The PDB will only be created if replicaCount is greater than 1
 ## ref: https://kubernetes.io/docs/concepts/workloads/pods/disruptions
 ##
 pdb:
-  create: false
+  create: true
   ## Min number of pods that must still be available after the eviction
   ##
   # minAvailable: 1
@@ -687,7 +682,7 @@ metrics:
   ## Prometheus Kafka Exporter: exposes complimentary metrics to JMX Exporter
   ##
   kafka:
-    enabled: false
+    enabled: true
 
     ## Bitnami Kafka exporter image
     ## ref: https://hub.docker.com/r/bitnami/kafka-exporter/tags/
@@ -775,7 +770,7 @@ metrics:
   ## Prometheus JMX Exporter: exposes the majority of Kafkas metrics
   ##
   jmx:
-    enabled: false
+    enabled: true
 
     ## Bitnami JMX exporter image
     ## ref: https://hub.docker.com/r/bitnami/jmx-exporter/tags/
@@ -913,19 +908,21 @@ zookeeper:
   auth:
     ## Enable Zookeeper auth
     ##
-    enabled: false
+    enabled: true
     ## User that will use Zookeeper clients to auth
     ##
-    # clientUser:
+    clientUser: zookeeperUser
     ## Password that will use Zookeeper clients to auth
     ##
-    # clientPassword:
+    clientPassword: zookeeperPassword
     ## Comma, semicolon or whitespace separated list of user to be created. Specify them as a string, for example: "user1,user2,admin"
     ##
-    # serverUsers:
+    serverUsers: zookeeperUser
     ## Comma, semicolon or whitespace separated list of passwords to assign to users when created. Specify them as a string, for example: "pass4user1, pass4user2, pass4admin"
     ##
-    # serverPasswords:
+    serverPasswords: zookeeperPassword
+  metrics:
+    enabled: true
 
 ## This value is only used when zookeeper.enabled is set to false
 ##
@@ -933,25 +930,3 @@ externalZookeeper:
   ## Server or list of external zookeeper servers to use.
   ##
   servers: []
-
-
-
-ingress:
-  enabled: false
-  annotations: {}
-    # kubernetes.io/ingress.class: nginx
-    # kubernetes.io/tls-acme: "true"
-  labels: {}
-  path: /
-  hosts:
-    - motor-kafka.paytminsurance.co.in
-  ## Extra paths to prepend to every host configuration. This is useful when working with annotation based services.
-  extraPaths: []
-  # - path: /*
-  #   backend:
-  #     serviceName: ssl-redirect
-  #     servicePort: use-annotation
-  tls: []
-  #  - secretName: chart-example-tls
-  #    hosts:
-  #      - chart-example.local
