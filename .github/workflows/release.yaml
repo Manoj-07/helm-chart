@@ -19,6 +19,6 @@ jobs:
           git config user.name "Manoj-07"
           git config user.email "Manoj-07@users.noreply.github.com"
       - name: Run chart-releaser
-        uses: helm/chart-releaser-action@master
+        uses: helm/chart-releaser-action@main
         env:
           CR_TOKEN: '${{ secrets.CR_TOKEN }}'
