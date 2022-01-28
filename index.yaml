@@ -1,13 +1,23 @@
 apiVersion: v1
 entries:
+  fluentd:
+  - apiVersion: v1
+    appVersion: v1.3-debian-elasticsearch-1
+    created: "2022-01-28T06:06:15.748482608Z"
+    description: Helm chart for the Fluentd
+    digest: 351b4e56603bd0779744d5d66bb79210bacc77bce977b79cb83ad0e204a9b54e
+    name: fluentd
+    urls:
+    - https://Manoj-07.github.io/helm-chart/fluentd-v1.3-debian-elasticsearch-1.tgz
+    version: v1.3-debian-elasticsearch-1
   kafka:
   - annotations:
       category: Infrastructure
     apiVersion: v1
     appVersion: 2.6.0
-    created: "2022-01-27T19:26:18.898880763Z"
+    created: "2022-01-28T06:06:15.752288555Z"
     description: Apache Kafka is a distributed streaming platform.
-    digest: fa553b9b32472db0fe8a71d80ed71d85b085ed84d26e4d911d5e064194a62e3c
+    digest: d22487bd195abed9f46a75db082d2d330be081ba93cbde1383304cc2fa5ccdd8
     home: https://github.com/bitnami/charts/tree/master/bitnami/kafka
     icon: https://bitnami.com/assets/stacks/kafka/img/kafka-stack-110x117.png
     keywords:
@@ -26,4 +36,4 @@ entries:
     urls:
     - https://Manoj-07.github.io/helm-chart/kafka-11.8.8.tgz
     version: 11.8.8
-generated: "2022-01-27T19:26:18.89555536Z"
+generated: "2022-01-28T06:06:15.744942565Z"
