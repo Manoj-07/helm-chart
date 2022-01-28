@@ -20,3 +20,4 @@ engine: gotpl
 icon: https://bitnami.com/assets/stacks/kafka/img/kafka-stack-110x117.png
 annotations:
   category: Infrastructure
+#hi
