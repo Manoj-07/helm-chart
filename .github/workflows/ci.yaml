@@ -16,7 +16,7 @@ jobs:
         with:
           command: lint
           config: .github/ct.yaml
-  Kubernetes apiVersions:
+  Kubernetes-apiVersions:
     runs-on: ubuntu-latest
     steps:
       - name: Download Pluto
