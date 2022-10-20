@@ -3,7 +3,7 @@ name: Lint and Test Charts
 on:
   pull_request:
     paths:
-      - 'stable/**'
+      - 'helm/**'
 
 jobs:
   lint-chart:
@@ -16,7 +16,16 @@ jobs:
         with:
           command: lint
           config: .github/ct.yaml
-
+  Kubernetes-apiVersions:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v1
+      - name: Download Pluto
+        uses: FairwindsOps/pluto/github-action@master
+      - name: Use pluto
+        run: |
+          pluto detect-files -d helm
   kubeval-chart:
     runs-on: ubuntu-latest
     needs:
@@ -24,8 +33,8 @@ jobs:
     strategy:
       matrix:
         k8s:
-          - v1.16.8
-          - v1.17.4
+          - v1.24.1
+          # - v1.17.4
     steps:
       - name: Checkout
         uses: actions/checkout@v1
@@ -43,8 +52,8 @@ jobs:
     strategy:
       matrix:
         k8s:
-          - v1.16.4
-          - v1.17.2
+          - v1.24.1
+          # - v1.17.2
     steps:
       - name: Checkout
         uses: actions/checkout@v1
