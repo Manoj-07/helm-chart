@@ -19,6 +19,8 @@ jobs:
   Kubernetes-apiVersions:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v1
       - name: Download Pluto
         uses: FairwindsOps/pluto/github-action@master
       - name: Use pluto
